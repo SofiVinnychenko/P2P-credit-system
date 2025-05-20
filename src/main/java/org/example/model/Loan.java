@@ -25,8 +25,11 @@ public class Loan {
     @JoinColumn(name = "debtor_id", nullable = false)
     private User debtor;
     private BigDecimal amount;
+    @Column(name = "interest_rate")
     private BigDecimal interestRate;
+    @Column(name = "start_date")
     private LocalDate startDate;
+    @Column(name = "end_date")
     private LocalDate endDate;
     @Enumerated(EnumType.STRING)
     private LoanStatus status;
