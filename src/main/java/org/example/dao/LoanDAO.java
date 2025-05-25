@@ -1,4 +1,7 @@
 package org.example.dao;
 
-public class LoanDAO {
+import org.example.model.Loan;
+import org.hibernate.SessionFactory;
+
+public interface LoanDAO{
 }

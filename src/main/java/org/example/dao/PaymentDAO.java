@@ -1,4 +1,4 @@
 package org.example.dao;
 
-public class PaymentDAO {
+public interface PaymentDAO {
 }
