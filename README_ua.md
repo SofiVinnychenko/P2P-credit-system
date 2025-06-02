@@ -18,7 +18,7 @@
 - [x] AppContext — ручне керування залежностями
 - [x] Базовий CRUD через AbstractQueriesDAO<T>
 
-Плановані доопрацювання
+Плановані доопрацювання:
 - [ ] Завершити реалізацію конкретних DAO-класів (UserDaoImpl, LoanDaoImpl, PaymentDaoImpl)
 - [ ] Реалізувати сервіси (LoanService, PaymentService) з підтримкою валідації та бізнес-логіки
 - [ ] Додати використання CriteriaBuilder для динамічних запитів
