@@ -8,7 +8,7 @@ import java.util.List;
 
 public abstract class AbstractQueriesDAO<T> {
     private final Class<T> aClass;
-    private final SessionFactory sessionFactory;
+    protected final SessionFactory sessionFactory;
 
     public AbstractQueriesDAO(Class<T> aClass, SessionFactory sessionFactory) {
         this.aClass = aClass;
@@ -40,7 +40,7 @@ public abstract class AbstractQueriesDAO<T> {
 
     public List<T> findAll() {
         try (Session session = sessionFactory.openSession()) {
-            return session.createQuery("from" + aClass.getName(), aClass).list();
+            return session.createQuery("from " + aClass.getName(), aClass).list();
         }
     }
 }

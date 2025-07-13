@@ -8,20 +8,21 @@ import org.example.constants.LoanStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
 @Entity
-@Table(name = "loan", schema = "public")
+@Table(name = "loans", schema = "public")
 public class Loan {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "creditor_id", nullable = false)
     private User creditor;
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "debtor_id", nullable = false)
     private User debtor;
     private BigDecimal amount;
@@ -33,5 +34,7 @@ public class Loan {
     private LocalDate endDate;
     @Enumerated(EnumType.STRING)
     private LoanStatus status;
+    @OneToMany(mappedBy = "loan", fetch = FetchType.LAZY)
+    private List<Payment> payments;
 
 }

@@ -6,12 +6,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "user", schema = "public")
+@Table(name = "users", schema = "public")
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,4 +22,8 @@ public class User {
     private String phoneNumber;
     private String email;
     private BigDecimal balance;
+    @OneToMany(mappedBy = "creditor", fetch = FetchType.LAZY)
+    private List<Loan> givenLoans;
+    @OneToMany(mappedBy = "debtor", fetch = FetchType.LAZY)
+    private List<Loan> takenLoans;
 }
