@@ -6,7 +6,7 @@ import org.hibernate.Transaction;
 
 import java.util.List;
 
-public abstract class AbstractQueriesDAO<T> {
+public abstract class AbstractQueriesDAO<T> implements BaseMethodsDAO<T>{
     private final Class<T> aClass;
     protected final SessionFactory sessionFactory;
 
@@ -15,7 +15,7 @@ public abstract class AbstractQueriesDAO<T> {
         this.sessionFactory = sessionFactory;
     }
 
-    public T create(T entity) {
+    public T saveOrUpdate(T entity) {
         try (Session session = sessionFactory.openSession()){
             Transaction transaction = session.beginTransaction();
             session.saveOrUpdate(entity);

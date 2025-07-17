@@ -1,9 +1,7 @@
 package org.example.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.example.constants.LoanStatus;
 
 import java.math.BigDecimal;
@@ -12,7 +10,10 @@ import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
+@Builder
+@Getter
+@ToString
+@EqualsAndHashCode
 @Entity
 @Table(name = "loans", schema = "public")
 public class Loan {
@@ -31,10 +32,17 @@ public class Loan {
     @Column(name = "start_date")
     private LocalDate startDate;
     @Column(name = "end_date")
+    @Setter
     private LocalDate endDate;
     @Enumerated(EnumType.STRING)
     private LoanStatus status;
     @OneToMany(mappedBy = "loan", fetch = FetchType.LAZY)
     private List<Payment> payments;
 
+    public void setStatus(LoanStatus status) {
+        if (this.status == LoanStatus.REPAID) {
+            throw new IllegalArgumentException();
+        }
+        this.status = status;
+    }
 }

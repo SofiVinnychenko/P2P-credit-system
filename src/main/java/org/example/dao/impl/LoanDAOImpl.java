@@ -4,15 +4,13 @@ import org.example.constants.LoanStatus;
 import org.example.dao.AbstractQueriesDAO;
 import org.example.dao.LoanDAO;
 import org.example.model.Loan;
-import org.example.model.Payment;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class LoanDAOImpl extends AbstractQueriesDAO<Loan> implements LoanDAO {
 
@@ -20,14 +18,14 @@ public class LoanDAOImpl extends AbstractQueriesDAO<Loan> implements LoanDAO {
         super(Loan.class, sessionFactory);
     }
 
-    public List<Loan> getLoansByCreditorId(int creditorId) {
+    public List<Loan> getLoansByCreditorId(Long creditorId) {
         try (Session session = sessionFactory.openSession()) {
             return session.createQuery("select l from Loan l where l.creditor.id = :creditor", Loan.class)
                     .setParameter("creditor", creditorId).list();
         }
     }
 
-    public List<Loan> getLoanByDebtorIdAndStatus(int debtorId, LoanStatus loanStatus) {
+    public List<Loan> getLoanByDebtorIdAndStatus(Long debtorId, LoanStatus loanStatus) {
         try (Session session = sessionFactory.openSession()) {
             return session.createQuery("select l from Loan l where l.debtor.id = :debtor and l.status = :status", Loan.class)
                     .setParameter("debtor", debtorId)
@@ -36,30 +34,41 @@ public class LoanDAOImpl extends AbstractQueriesDAO<Loan> implements LoanDAO {
         }
     }
 
-    public BigDecimal sumOfLoansByDebtor(int debtorId, LoanStatus loanStatus) {
+    public BigDecimal sumOfLoansByDebtor(Long debtorId, LoanStatus loanStatus) {
         try (Session session = sessionFactory.openSession()) {
             return session.createQuery("""
-             select coalesce(sum(l.amount), 0) from Loan l where l.debtor.id = :debtor and l.status = :status""", BigDecimal.class)
+             select coalesce(sum(l.amount), 0) from Loan l 
+             where l.debtor.id = :debtor and l.status = :status""", BigDecimal.class)
                     .setParameter("debtor", debtorId)
                     .setParameter("status", loanStatus).uniqueResult();
         }
     }
 
-    public BigDecimal avgOfInterestRateByLastMonth() {
+    public BigDecimal avgOfInterestRate(Collection<LoanStatus> loanStatuses) {
         try (Session session = sessionFactory.openSession()) {
-            LocalDate oneMonth = LocalDate.now().minusMonths(1);
             return session.createQuery(
                             """
-            select coalesce(avg(l.interestRate), 0) from Loan l where l.startDate >= :oneMonth""", BigDecimal.class)
-                    .setParameter("oneMonth", oneMonth)
+            select coalesce(avg(l.interestRate), 0) from Loan l 
+            where l.status in :statuses""", BigDecimal.class)
+                    .setParameterList("statuses", loanStatuses)
                     .uniqueResult();
         }
     }
 
     public List<Loan> almostExpiredLoans() {
         try (Session session = sessionFactory.openSession()) {
+            LocalDate today = LocalDate.now();
+            LocalDate sevenDaysFromNow = today.plusDays(7);
+
             return session.createQuery("""
-             select l from Loan l where l.endDate >= CURRENT_DATE - 7""", Loan.class)
+            select l from Loan l 
+            where l.status = :status and l.endDate 
+            between :startDate and :endDate 
+            order by l.endDate asc
+            """, Loan.class)
+                    .setParameter("status", LoanStatus.ACTIVE)
+                    .setParameter("startDate", today)
+                    .setParameter("endDate", sevenDaysFromNow)
                     .list();
         }
     }
@@ -73,7 +82,7 @@ public class LoanDAOImpl extends AbstractQueriesDAO<Loan> implements LoanDAO {
         }
     }
 
-    public Loan getPaymentsByLoan(int loanId) {
+    public Loan getPaymentsByLoan(Long loanId) {
         try (Session session = sessionFactory.openSession()) {
             return session.createQuery("""
             select l from Loan l left join fetch l.payments where l.id = :loanId""", Loan.class)

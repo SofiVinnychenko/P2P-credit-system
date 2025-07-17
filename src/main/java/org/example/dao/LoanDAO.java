@@ -5,21 +5,22 @@ import org.example.model.Loan;
 import org.hibernate.SessionFactory;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 
-public interface LoanDAO{
+public interface LoanDAO extends BaseMethodsDAO<Loan>{
 
-    List<Loan> getLoansByCreditorId(int creditorId);
+    List<Loan> getLoansByCreditorId(Long creditorId);
 
-    List<Loan> getLoanByDebtorIdAndStatus(int debtorId, LoanStatus loanStatus);
+    List<Loan> getLoanByDebtorIdAndStatus(Long debtorId, LoanStatus loanStatus);
 
-    BigDecimal sumOfLoansByDebtor(int debtorId, LoanStatus loanStatus);
+    BigDecimal sumOfLoansByDebtor(Long debtorId, LoanStatus loanStatus);
 
-    BigDecimal avgOfInterestRateByLastMonth();
+    BigDecimal avgOfInterestRate(Collection<LoanStatus> loanStatuses);
 
     List<Loan> almostExpiredLoans();
 
     List<Loan> getAllLoansByStatus(LoanStatus loanStatus);
 
-    Loan getPaymentsByLoan(int loanId);
+    Loan getPaymentsByLoan(Long loanId);
 }
