@@ -36,6 +36,7 @@ public class Loan {
     private LocalDate endDate;
     @Enumerated(EnumType.STRING)
     private LoanStatus status;
+    @Setter
     @OneToMany(mappedBy = "loan", fetch = FetchType.LAZY)
     private List<Payment> payments;
 

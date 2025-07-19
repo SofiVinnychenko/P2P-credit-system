@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.constants.LoanStatus;
 import org.example.constants.PaymentType;
 import org.example.dao.LoanDAO;
+import org.example.dto.LoanDTO;
 import org.example.model.Loan;
 import org.example.model.Payment;
 import org.example.model.User;
@@ -27,41 +28,28 @@ public class LoanService {
         this.loanDAO = loanDAO;
     }
 
-    private boolean validateData(User creditor, User debtor, BigDecimal amount, BigDecimal interestRate, int term) {
-        if (creditor == null || debtor == null) {
-            return false;
-        } else if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            return false;
-        } else if (term <= 0 || term > 12) {
-            return false;
-        } else if (interestRate.compareTo(BigDecimal.ZERO) <= 0) {
-            return false;
-        } else {
-            return true;
+    public Loan createLoan(LoanDTO loanDTO, PaymentService paymentService) {
+        if (!loanDTO.isValid()) {
+            throw new IllegalArgumentException("Invalid loan creation data");
         }
-    }
-
-    public Loan createLoan(User creditor, User debtor, BigDecimal amount, BigDecimal interestRate, int term) {
-        if (!(validateData(creditor, debtor, amount, interestRate, term))) {
-            throw new IllegalArgumentException();
-        }
-        if (!canDebtorTakeNewLoan(debtor)) {
-            logger.warn("Taking out of new loan is forbidden: debtor have a defaulted loans.");
+        if (!canDebtorTakeNewLoan(loanDTO.getDebtor())) {
             throw new IllegalStateException("Debtor cannot take new loan");
         }
         Loan loan = Loan.builder()
-                .amount(amount)
-                .creditor(creditor)
-                .debtor(debtor)
+                .amount(loanDTO.getAmount())
+                .creditor(loanDTO.getCreditor())
+                .debtor(loanDTO.getDebtor())
                 .startDate(LocalDate.now())
-                .endDate(LocalDate.now().plusMonths(term))
-                .interestRate(interestRate)
+                .endDate(LocalDate.now().plusMonths(loanDTO.getTerm()))
+                .interestRate(loanDTO.getInterestRate())
                 .status(LoanStatus.ACTIVE)
                 .payments(new ArrayList<>())
                 .build();
         loanDAO.saveOrUpdate(loan);
 
-        // звернутися до методу з PaymentService для створення графіку платежів
+        List<Payment> schedule = paymentService.generateDifferentiatedSchedule(loan);
+        loan.setPayments(schedule);
+
         return loan;
     }
 
@@ -86,7 +74,7 @@ public class LoanService {
         updateLoanStatus(loan, LoanStatus.REPAID);
     }
 
-    public Loan getLoanById(int id) {
+    public Loan getLoanById(Long id) {
         return loanDAO.findById(id);
     }
 
@@ -107,14 +95,50 @@ public class LoanService {
     }
 
     public BigDecimal calculateRemainingDebt(Loan loan) {
-        long numberOfDays = ChronoUnit.DAYS.between(loan.getStartDate(), LocalDate.now());
-        List<Payment> payments = loan.getPayments();
-        BigDecimal sumOfPayments = payments.stream()
-                .map(Payment::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal percents = loan.getAmount().multiply(loan.getInterestRate()).multiply(BigDecimal.valueOf(numberOfDays))
+
+        BigDecimal currentPrincipal = loan.getAmount();
+        LocalDate lastCalculationDate = loan.getStartDate();
+
+        List<Payment> sortedPayments = loan.getPayments().stream()
+                .filter(payment -> payment.getType().equals(PaymentType.PAID))
+                .sorted(Comparator.comparing(Payment::getPaidDate))
+                .toList();
+
+        for (Payment payment : sortedPayments) {
+
+            BigDecimal percents = processInterestAccrual(loan, lastCalculationDate, payment.getPaidDate(), currentPrincipal);
+
+            lastCalculationDate = payment.getPaidDate();
+
+            BigDecimal paymentAmount = payment.getAmount();
+            if (paymentAmount.compareTo(percents) >= 0) {
+                BigDecimal principalPaid = paymentAmount.subtract(percents);
+                currentPrincipal = currentPrincipal.subtract(principalPaid);
+            } else {
+                BigDecimal unpaidInterest = percents.subtract(paymentAmount);
+                currentPrincipal = currentPrincipal.add(unpaidInterest);
+            }
+            if (currentPrincipal.compareTo(BigDecimal.ZERO) < 0) {
+                currentPrincipal = BigDecimal.ZERO;
+            }
+        }
+        BigDecimal finalInterestAccrued = processInterestAccrual(loan, lastCalculationDate, LocalDate.now(), currentPrincipal);
+        return currentPrincipal.add(finalInterestAccrued);
+    }
+
+    public BigDecimal processInterestAccrual(Loan loan, LocalDate startDate, LocalDate endDate, BigDecimal principal) {
+        if (startDate.isAfter(endDate) || startDate.equals(endDate)) {
+            return BigDecimal.ZERO;
+        }
+
+        if (principal.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        long daysSinceLastPayment = ChronoUnit.DAYS.between(startDate, endDate);
+        return principal
+                .multiply(loan.getInterestRate())
+                .multiply(BigDecimal.valueOf(daysSinceLastPayment))
                 .divide(BigDecimal.valueOf(365), RoundingMode.HALF_UP);
-        return loan.getAmount().add(percents).subtract(sumOfPayments);
     }
 
     public void checkOverdueLoans() {
@@ -126,14 +150,6 @@ public class LoanService {
                 logger.warn("Status of loan was changed: DEFAULTED!");
             }
         }
-    }
-
-    public void processInterestAccrual() {
-        List<Loan> activeLoans = loanDAO.getAllLoansByStatus(LoanStatus.ACTIVE);
-        for (Loan loan : activeLoans) {
-            loan.getPayments();
-        }
-        // потрібно організувати метод для суми внесених платежів у PaymentService
     }
 
     public boolean canDebtorTakeNewLoan(User debtor) {
@@ -162,15 +178,16 @@ public class LoanService {
                 .toList();
     }
 
+    public List<Loan> getAllLoans() {
+        return loanDAO.findAll();
+    }
+
 
     public BigDecimal getTotalDebtByDebtor(User debtor) {
         return loanDAO.sumOfLoansByDebtor(debtor.getId(), LoanStatus.ACTIVE);
     }
 
     private boolean isOverdue(Loan loan) {
-        if (loan.getEndDate().isBefore(LocalDate.now())) {
-            return true;
-        }
-        return false;
+        return loan.getEndDate().isBefore(LocalDate.now());
     }
 }

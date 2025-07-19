@@ -24,17 +24,9 @@ public abstract class AbstractQueriesDAO<T> implements BaseMethodsDAO<T>{
         return entity;
     }
 
-    public T findById(int id) {
+    public T findById(Long id) {
         try (Session session = sessionFactory.openSession()){
             return session.get(aClass, id);
-        }
-    }
-
-    public void delete(T entity) {
-        try (Session session = sessionFactory.openSession()){
-            Transaction transaction = session.beginTransaction();
-            session.delete(entity);
-            transaction.commit();
         }
     }
 

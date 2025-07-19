@@ -2,7 +2,6 @@ package org.example.dao;
 
 import org.example.constants.LoanStatus;
 import org.example.model.Loan;
-import org.hibernate.SessionFactory;
 
 import java.math.BigDecimal;
 import java.util.Collection;

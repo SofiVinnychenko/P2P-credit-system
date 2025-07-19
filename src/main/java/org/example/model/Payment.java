@@ -1,9 +1,7 @@
 package org.example.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.example.constants.PaymentType;
 
 import java.math.BigDecimal;
@@ -13,6 +11,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
+@Builder
 @Table(name = "payments", schema = "public")
 public class Payment {
     @Id
@@ -21,8 +20,11 @@ public class Payment {
     @ManyToOne
     @JoinColumn(name = "loan_id", nullable = false)
     private Loan loan;
-    private LocalDate date;
+    private LocalDate dueDate;
+    @Setter
+    private LocalDate paidDate;
     private BigDecimal amount;
+    @Setter
     @Enumerated(EnumType.STRING)
     private PaymentType type;
 }

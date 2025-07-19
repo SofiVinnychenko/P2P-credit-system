@@ -4,7 +4,6 @@ import java.util.List;
 
 public interface BaseMethodsDAO<T> {
     T saveOrUpdate(T entity);
-    T findById(int id);
-    void delete(T entity);
+    T findById(Long id);
     List<T> findAll();
 }
