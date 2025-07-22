@@ -26,7 +26,6 @@ public class User {
     @Column(name = "phone_number")
     private String phoneNumber;
     private String email;
-    private BigDecimal balance;
     @OneToMany(mappedBy = "creditor", fetch = FetchType.LAZY)
     private List<Loan> givenLoans;
     @OneToMany(mappedBy = "debtor", fetch = FetchType.LAZY)

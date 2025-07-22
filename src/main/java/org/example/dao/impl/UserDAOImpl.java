@@ -14,6 +14,15 @@ public class UserDAOImpl extends AbstractQueriesDAO<User> implements UserDAO {
         super(User.class, sessionFactory);
     }
 
+    public List<User> getUsersByKeyword(String keyword) {
+        try (Session session = sessionFactory.openSession()) {
+            return session.createQuery("""
+            select u from User u where u.firstName like :pattern or u.lastName like :pattern""", User.class)
+                    .setParameter("pattern", "%" + keyword + "%")
+                    .list();
+        }
+    }
+
     public User getGivenLoansByUser(Long id){
         try (Session session = sessionFactory.openSession()) {
             return session.createQuery("""
@@ -27,15 +36,6 @@ public class UserDAOImpl extends AbstractQueriesDAO<User> implements UserDAO {
             return session.createQuery("""
             select u from User u left join fetch u.takenLoans where u.id = :id""", User.class)
                     .setParameter("id", id).uniqueResult();
-        }
-    }
-
-    public List<User> getUsersByKeyword(String keyword) {
-        try (Session session = sessionFactory.openSession()) {
-            return session.createQuery("""
-            select u from User u where u.firstName like :pattern or u.lastName like :pattern""", User.class)
-                    .setParameter("pattern", "%" + keyword + "%")
-                    .list();
         }
     }
 }

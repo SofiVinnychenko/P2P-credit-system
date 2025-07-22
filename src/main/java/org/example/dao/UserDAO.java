@@ -7,9 +7,9 @@ import java.util.List;
 
 public interface UserDAO extends BaseMethodsDAO<User> {
 
+    List<User> getUsersByKeyword(String keyword);
+
     User getGivenLoansByUser(Long id);
 
     User getTakenLoansByUser(Long id);
-
-    List<User> getUsersByKeyword(String keyword);
 }

@@ -45,9 +45,9 @@ public class LoanService {
                 .status(LoanStatus.ACTIVE)
                 .payments(new ArrayList<>())
                 .build();
-        loanDAO.saveOrUpdate(loan);
+        loanDAO.save(loan);
 
-        List<Payment> schedule = paymentService.generateDifferentiatedSchedule(loan);
+        List<Payment> schedule = paymentService.generateAndSaveSchedule(loan);
         loan.setPayments(schedule);
 
         return loan;
@@ -59,7 +59,7 @@ public class LoanService {
             loan.setEndDate(LocalDate.now());
             logger.debug("Status and expired date were changed!");
         }
-        loanDAO.saveOrUpdate(loan);
+        loanDAO.update(loan);
         logger.debug("Status was changed!");
     }
 
@@ -146,7 +146,7 @@ public class LoanService {
         for (Loan loan : activeLoans) {
             if (isOverdue(loan)) {
                 loan.setStatus(LoanStatus.DEFAULTED);
-                loanDAO.saveOrUpdate(loan);
+                loanDAO.update(loan);
                 logger.warn("Status of loan was changed: DEFAULTED!");
             }
         }
@@ -162,14 +162,6 @@ public class LoanService {
         } else {
             return true;
         }
-    }
-
-    public BigDecimal getAverageInterestRateForAllLoans() {
-        return loanDAO.avgOfInterestRate(Arrays.asList(LoanStatus.ACTIVE, LoanStatus.REPAID, LoanStatus.DEFAULTED));
-    }
-
-    public BigDecimal getAverageInterestRateForActiveLoans() {
-        return loanDAO.avgOfInterestRate(List.of(LoanStatus.ACTIVE));
     }
 
     public List<Loan> getUpcomingExpirations() {

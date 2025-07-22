@@ -44,17 +44,6 @@ public class LoanDAOImpl extends AbstractQueriesDAO<Loan> implements LoanDAO {
         }
     }
 
-    public BigDecimal avgOfInterestRate(Collection<LoanStatus> loanStatuses) {
-        try (Session session = sessionFactory.openSession()) {
-            return session.createQuery(
-                            """
-            select coalesce(avg(l.interestRate), 0) from Loan l 
-            where l.status in :statuses""", BigDecimal.class)
-                    .setParameterList("statuses", loanStatuses)
-                    .uniqueResult();
-        }
-    }
-
     public List<Loan> almostExpiredLoans() {
         try (Session session = sessionFactory.openSession()) {
             LocalDate today = LocalDate.now();

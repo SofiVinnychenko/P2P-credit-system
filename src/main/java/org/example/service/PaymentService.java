@@ -27,7 +27,7 @@ public class PaymentService {
     public List<Payment> generateAndSaveSchedule(Loan loan) {
         List<Payment> schedule = generateDifferentiatedSchedule(loan);
         for (Payment payment : schedule) {
-            paymentDAO.saveOrUpdate(payment);
+            paymentDAO.save(payment);
         }
         return schedule;
     }
@@ -72,7 +72,7 @@ public class PaymentService {
         }
         payment.setPaidDate(LocalDate.now());
         payment.setType(PaymentType.PAID);
-        paymentDAO.saveOrUpdate(payment);
+        paymentDAO.update(payment);
     }
 
     public List<Payment> getPaymentsByLoanIdAndType(Loan loan, PaymentType paymentType) {

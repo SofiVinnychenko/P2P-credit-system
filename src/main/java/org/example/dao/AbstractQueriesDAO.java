@@ -15,13 +15,22 @@ public abstract class AbstractQueriesDAO<T> implements BaseMethodsDAO<T>{
         this.sessionFactory = sessionFactory;
     }
 
-    public T saveOrUpdate(T entity) {
-        try (Session session = sessionFactory.openSession()){
+    public T save(T entity) {
+        try (Session session = sessionFactory.openSession()) {
             Transaction transaction = session.beginTransaction();
-            session.saveOrUpdate(entity);
+            session.persist(entity);
             transaction.commit();
+            return entity;
         }
-        return entity;
+    }
+
+    public T update(T entity) {
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.beginTransaction();
+            T mergedEntity = (T) session.merge(entity);
+            transaction.commit();
+            return mergedEntity;
+        }
     }
 
     public T findById(Long id) {

@@ -15,8 +15,6 @@ public interface LoanDAO extends BaseMethodsDAO<Loan>{
 
     BigDecimal sumOfLoansByDebtor(Long debtorId, LoanStatus loanStatus);
 
-    BigDecimal avgOfInterestRate(Collection<LoanStatus> loanStatuses);
-
     List<Loan> almostExpiredLoans();
 
     List<Loan> getAllLoansByStatus(LoanStatus loanStatus);

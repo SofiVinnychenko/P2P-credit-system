@@ -29,9 +29,8 @@ public class UserService {
                 .lastName(userDTO.getLastName())
                 .phoneNumber(userDTO.getPhoneNumber())
                 .email(userDTO.getEmail())
-                .balance(userDTO.getBalance())
                 .build();
-        userDAO.saveOrUpdate(user);
+        userDAO.save(user);
         return user;
     }
 
@@ -39,30 +38,31 @@ public class UserService {
         return userDAO.getUsersByKeyword(keyword);
     }
 
-    public void updateUser(Long id, UserDTO userDTO) {
+    public User updateUser(Long id, UserDTO userDTO) {
         User userById = userDAO.findById(id);
         if (userById == null) {
             throw new IllegalStateException("User with id " + id + " not found");
         }
-
-        if (userDTO.getFirstName() != null && !userDTO.getFirstName().isEmpty()) {
+        if (userDTO.getFirstName() != null && !userDTO.getFirstName().trim().isEmpty()) {
             userById.setFirstName(userDTO.getFirstName());
         }
-        if (userDTO.getLastName() != null && !userDTO.getLastName().isEmpty()) {
+        if (userDTO.getLastName() != null && !userDTO.getLastName().trim().isEmpty()) {
             userById.setLastName(userDTO.getLastName());
         }
-        if (userDTO.getPhoneNumber() != null && !userDTO.getPhoneNumber().isEmpty()) {
+        if (userDTO.getPhoneNumber() != null && !userDTO.getPhoneNumber().trim().isEmpty()) {
             userById.setPhoneNumber(userDTO.getPhoneNumber());
         }
-        if (userDTO.getEmail() != null && !userDTO.getEmail().isEmpty()) {
+        if (userDTO.getEmail() != null && !userDTO.getEmail().trim().isEmpty()) {
             userById.setEmail(userDTO.getEmail());
         }
-        userDAO.saveOrUpdate(userById);
+        return userDAO.update(userById);
     }
 
-    public User getTakenLoansByUser(Long id) {
-        return userDAO.getTakenLoansByUser(id);
+    public User getTakenLoansByUser(User user) {
+        return userDAO.getTakenLoansByUser(user.getId());
     }
 
-
+    public User getGivenLoansByUser(User user) {
+        return userDAO.getGivenLoansByUser(user.getId());
+    }
 }
