@@ -19,5 +19,4 @@ public interface LoanDAO extends BaseMethodsDAO<Loan>{
 
     List<Loan> getAllLoansByStatus(LoanStatus loanStatus);
 
-    Loan getPaymentsByLoan(Long loanId);
 }

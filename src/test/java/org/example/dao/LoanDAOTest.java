@@ -1,6 +1,5 @@
 package org.example.dao;
 
-import lombok.extern.slf4j.Slf4j;
 import org.example.config.HibernateUtil;
 import org.example.constants.LoanStatus;
 import org.example.dao.impl.LoanDAOImpl;
@@ -10,11 +9,11 @@ import org.example.model.User;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,102 +24,66 @@ public class LoanDAOTest {
     private static SessionFactory sessionFactory;
     private static UserDAO userDAO;
     private static LoanDAO loanDAO;
-    private static List<Object> objectList;
+
+    private TestData testData;
 
     @BeforeAll
     public static void setUp() {
         sessionFactory = HibernateUtil.getSessionFactory();
         userDAO = new UserDAOImpl(sessionFactory);
         loanDAO = new LoanDAOImpl(sessionFactory);
-
-        objectList = new ArrayList<>();
     }
 
-    public static List<Object> createData() {
-        if (objectList.isEmpty()) {
-            User creditor = User.builder()
-                    .firstName("creditorName")
-                    .lastName("creditorLastName")
-                    .phoneNumber("0997655456")
-                    .email("creditor@gmail.com")
-                    .build();
-            userDAO.save(creditor);
-            objectList.add(creditor);
+    @BeforeEach
+    public void initData() {
+        cleanup();
+        testData = createData();
+    }
 
-            User creditor1 = User.builder()
-                    .firstName("creditorName1")
-                    .lastName("creditorLastName1")
-                    .phoneNumber("0997655458")
-                    .email("creditor1@gmail.com")
-                    .build();
-            userDAO.save(creditor1);
-            objectList.add(creditor1);
+    public static TestData createData() {
+        TestData td = new TestData();
 
-            User debtor = User.builder()
-                    .firstName("debtorName")
-                    .lastName("debtorLastName")
-                    .phoneNumber("0987655459")
-                    .email("debtor@gmail.com")
-                    .build();
-            userDAO.save(debtor);
-            objectList.add(debtor);
+        td.creditor = createUser("creditorName", "creditorLastName", "0997655456", "creditor@gmail.com");
+        td.creditor1 = createUser("creditorName1", "creditorLastName1", "0997655458", "creditor1@gmail.com");
+        td.debtor = createUser("debtorName", "debtorLastName", "0987655459", "debtor@gmail.com");
 
-            Loan loan = Loan.builder()
-                    .amount(new BigDecimal("50000"))
-                    .creditor(creditor)
-                    .debtor(debtor)
-                    .startDate(LocalDate.now())
-                    .endDate(LocalDate.now().plusDays(2))
-                    .interestRate(new BigDecimal("0.5"))
-                    .status(LoanStatus.ACTIVE)
-                    .build();
-            loanDAO.save(loan);
-            objectList.add(loan);
+        td.loan = createLoan(new BigDecimal("50000"), td.creditor, td.debtor, LocalDate.now(), LocalDate.now().plusDays(2), new BigDecimal("0.5"), LoanStatus.ACTIVE);
+        td.loan1 = createLoan(new BigDecimal("50000"), td.creditor1, td.debtor, LocalDate.now(), LocalDate.now().plusMonths(5), new BigDecimal("0.8"), LoanStatus.ACTIVE);
+        td.loan2 = createLoan(new BigDecimal("70000"), td.creditor1, td.debtor, LocalDate.now().minusMonths(7), LocalDate.now().plusMonths(1), new BigDecimal("0.6"), LoanStatus.REPAID);
+        td.loan3 = createLoan(new BigDecimal("70000"), td.creditor1, td.debtor, LocalDate.now().minusMonths(1), LocalDate.now(), new BigDecimal("0.5"), LoanStatus.DEFAULTED);
 
-            Loan loan1 = Loan.builder()
-                    .amount(new BigDecimal("50000"))
-                    .creditor(creditor1)
-                    .debtor(debtor)
-                    .startDate(LocalDate.now())
-                    .endDate(LocalDate.now().plusMonths(5))
-                    .interestRate(new BigDecimal("0.8"))
-                    .status(LoanStatus.ACTIVE)
-                    .build();
-            loanDAO.save(loan1);
-            objectList.add(loan1);
+        return td;
+    }
 
-            Loan loan2 = Loan.builder()
-                    .amount(new BigDecimal("70000"))
-                    .creditor(creditor1)
-                    .debtor(debtor)
-                    .startDate(LocalDate.now().minusMonths(7))
-                    .endDate(LocalDate.now().plusMonths(1))
-                    .interestRate(new BigDecimal("0.6"))
-                    .status(LoanStatus.REPAID)
-                    .build();
-            loanDAO.save(loan2);
-            objectList.add(loan2);
+    private static User createUser(String firstName, String lastName, String phone, String email) {
+        User user = User.builder()
+                .firstName(firstName)
+                .lastName(lastName)
+                .phoneNumber(phone)
+                .email(email)
+                .build();
+        userDAO.save(user);
+        return user;
+    }
 
-            Loan loan3 = Loan.builder()
-                    .amount(new BigDecimal("70000"))
-                    .creditor(creditor1)
-                    .debtor(debtor)
-                    .startDate(LocalDate.now().minusMonths(1))
-                    .endDate(LocalDate.now())
-                    .interestRate(new BigDecimal("0.5"))
-                    .status(LoanStatus.DEFAULTED)
-                    .build();
-            loanDAO.save(loan3);
-            objectList.add(loan3);
-        }
-        return objectList;
+    private static Loan createLoan(BigDecimal amount, User creditor, User debtor, LocalDate start, LocalDate end, BigDecimal rate, LoanStatus status) {
+        Loan loan = Loan.builder()
+                .amount(amount)
+                .creditor(creditor)
+                .debtor(debtor)
+                .startDate(start)
+                .endDate(end)
+                .interestRate(rate)
+                .status(status)
+                .build();
+        loanDAO.save(loan);
+        return loan;
     }
 
     @Test
     public void getLoansByCreditorIdTest() {
 
-        User creditor = (User) createData().get(0);
-        List<Loan> loansByCreditorId = loanDAO.getLoansByCreditorId(creditor.getId());
+        List<Loan> loansByCreditorId = loanDAO.getLoansByCreditorId(testData.creditor.getId());
         assertNotNull(loansByCreditorId);
         assertEquals(1, loansByCreditorId.size());
     }
@@ -128,16 +91,14 @@ public class LoanDAOTest {
     @Test
     public void getLoanByDebtorIdAndStatusTest() {
 
-        User debtor = (User) createData().get(2);
-        List<Loan> loansByDebtor = loanDAO.getLoanByDebtorIdAndStatus(debtor.getId(), LoanStatus.ACTIVE);
+        List<Loan> loansByDebtor = loanDAO.getLoanByDebtorIdAndStatus(testData.debtor.getId(), LoanStatus.ACTIVE);
         assertNotNull(loansByDebtor);
         assertEquals(2, loansByDebtor.size());
     }
 
     @Test
     public void sumOfLoansByDebtorTest() {
-        User debtor = (User) createData().get(2);
-        BigDecimal sum = loanDAO.sumOfLoansByDebtor(debtor.getId(), LoanStatus.ACTIVE);
+        BigDecimal sum = loanDAO.sumOfLoansByDebtor(testData.debtor.getId(), LoanStatus.ACTIVE);
         assertNotNull(sum);
         assertEquals(0, sum.compareTo(BigDecimal.valueOf(100000.00)));
     }
@@ -158,12 +119,27 @@ public class LoanDAOTest {
 
     @AfterAll
     public static void cleanup() {
-        var session = sessionFactory.openSession();
-        var tx = session.beginTransaction();
-        session.createQuery("DELETE FROM Loan").executeUpdate();
-        session.createQuery("DELETE FROM User").executeUpdate();
-        tx.commit();
-        session.close();
+        try (var session = sessionFactory.openSession()) {
+            var tx = session.beginTransaction();
+            try {
+                session.createQuery("DELETE FROM Loan").executeUpdate();
+                session.createQuery("DELETE FROM User").executeUpdate();
+                tx.commit();
+            } catch (Exception e) {
+                tx.rollback();
+                throw e;
+            }
+        }
+    }
+
+    static class TestData {
+        User creditor;
+        User creditor1;
+        User debtor;
+        Loan loan;
+        Loan loan1;
+        Loan loan2;
+        Loan loan3;
     }
 
 

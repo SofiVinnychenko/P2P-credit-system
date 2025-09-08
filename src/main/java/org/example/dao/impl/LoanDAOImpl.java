@@ -71,12 +71,4 @@ public class LoanDAOImpl extends AbstractQueriesDAO<Loan> implements LoanDAO {
         }
     }
 
-    public Loan getPaymentsByLoan(Long loanId) {
-        try (Session session = sessionFactory.openSession()) {
-            return session.createQuery("""
-            select l from Loan l left join fetch l.payments where l.id = :loanId""", Loan.class)
-                    .setParameter("loanId", loanId).uniqueResult();
-        }
-    }
-
 }

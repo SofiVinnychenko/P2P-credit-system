@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -54,6 +55,9 @@ public class LoanService {
     }
 
     public void updateLoanStatus(Loan loan, LoanStatus loanStatus) {
+        if (loan == null) {
+            throw new IllegalArgumentException("Update Loan: Invalid loan");
+        }
         loan.setStatus(loanStatus);
         if (loan.getStatus().equals(LoanStatus.REPAID)) {
             loan.setEndDate(LocalDate.now());
@@ -64,6 +68,9 @@ public class LoanService {
     }
 
     public void closeLoan(Loan loan) {
+        if (loan == null) {
+            throw new IllegalArgumentException("Close Loan: Loan not found");
+        }
         List<Payment> payments = loan.getPayments();
         for (Payment payment : payments) {
             if ((payment.getType().equals(PaymentType.PENDING))) {
@@ -74,63 +81,38 @@ public class LoanService {
         updateLoanStatus(loan, LoanStatus.REPAID);
     }
 
-    public Loan getLoanById(Long id) {
-        return loanDAO.findById(id);
-    }
-
-    public Loan getPaymentsAndLoan(Loan loan) {
-        return loanDAO.getPaymentsByLoan(loan.getId());
-    }
-
     public List<Loan> getActiveLoansForCreditorInThisYear(User creditor) {
+        if (creditor == null) {
+            throw new IllegalArgumentException("Active Loans In Year: Creditor cannot be null");
+        }
         List<Loan> loansByCreditorId = loanDAO.getLoansByCreditorId(creditor.getId());
-        LocalDate year = LocalDate.now().minusMonths(12);
+        LocalDate startOfYear = LocalDate.now().with(TemporalAdjusters.firstDayOfYear());
         return loansByCreditorId.stream()
-                .filter(loan -> loan.getStatus().equals(LoanStatus.ACTIVE) && loan.getStartDate().isAfter(year))
+                .filter(loan -> loan.getStatus().equals(LoanStatus.ACTIVE) && loan.getStartDate().isAfter(startOfYear))
                 .collect(Collectors.toList());
     }
 
     public List<Loan> getActiveLoansForDebtor(User debtor) {
+        if (debtor == null) {
+            throw new IllegalArgumentException("Active Loans In Year: Debtor cannot be null");
+        }
         return loanDAO.getLoanByDebtorIdAndStatus(debtor.getId(), LoanStatus.ACTIVE);
     }
 
     public BigDecimal calculateRemainingDebt(Loan loan) {
-
-        BigDecimal currentPrincipal = loan.getAmount();
-        LocalDate lastCalculationDate = loan.getStartDate();
-
-        List<Payment> sortedPayments = loan.getPayments().stream()
-                .filter(payment -> payment.getType().equals(PaymentType.PAID))
-                .sorted(Comparator.comparing(Payment::getPaidDate))
-                .toList();
-
-        for (Payment payment : sortedPayments) {
-
-            BigDecimal percents = processInterestAccrual(loan, lastCalculationDate, payment.getPaidDate(), currentPrincipal);
-
-            lastCalculationDate = payment.getPaidDate();
-
-            BigDecimal paymentAmount = payment.getAmount();
-            if (paymentAmount.compareTo(percents) >= 0) {
-                BigDecimal principalPaid = paymentAmount.subtract(percents);
-                currentPrincipal = currentPrincipal.subtract(principalPaid);
-            } else {
-                BigDecimal unpaidInterest = percents.subtract(paymentAmount);
-                currentPrincipal = currentPrincipal.add(unpaidInterest);
-            }
-            if (currentPrincipal.compareTo(BigDecimal.ZERO) < 0) {
-                currentPrincipal = BigDecimal.ZERO;
-            }
+        if (loan == null) {
+            throw new IllegalArgumentException("Calculate Remaining: Loan not found");
         }
-        BigDecimal finalInterestAccrued = processInterestAccrual(loan, lastCalculationDate, LocalDate.now(), currentPrincipal);
-        return currentPrincipal.add(finalInterestAccrued);
+        return loan.getPayments().stream()
+                .filter(payment -> payment.getType() == PaymentType.PENDING)
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public BigDecimal processInterestAccrual(Loan loan, LocalDate startDate, LocalDate endDate, BigDecimal principal) {
         if (startDate.isAfter(endDate) || startDate.equals(endDate)) {
             return BigDecimal.ZERO;
         }
-
         if (principal.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
@@ -141,21 +123,24 @@ public class LoanService {
                 .divide(BigDecimal.valueOf(365), RoundingMode.HALF_UP);
     }
 
-    public void checkOverdueLoans() {
+    public boolean checkOverdueLoans() {
         List<Loan> activeLoans = loanDAO.getAllLoansByStatus(LoanStatus.ACTIVE);
         for (Loan loan : activeLoans) {
             if (isOverdue(loan)) {
-                loan.setStatus(LoanStatus.DEFAULTED);
+                updateLoanStatus(loan, LoanStatus.DEFAULTED);
                 loanDAO.update(loan);
-                logger.warn("Status of loan was changed: DEFAULTED!");
+                return true;
             }
         }
+        return false;
     }
 
     public boolean canDebtorTakeNewLoan(User debtor) {
+        if (debtor == null) {
+            throw new IllegalArgumentException("Can Debtor Take New Loan: Debtor cannot be null");
+        }
         BigDecimal sumOfActiveLoans = getTotalDebtByDebtor(debtor);
-        if (sumOfActiveLoans.compareTo(BigDecimal.valueOf(50_000)) > 0) {
-            logger.warn("Taking out of new loan is forbidden: loan limit has been reached.");
+        if (sumOfActiveLoans.compareTo(BigDecimal.valueOf(50_000)) >= 0) {
             return false;
         } else if (!(loanDAO.getLoanByDebtorIdAndStatus(debtor.getId(), LoanStatus.DEFAULTED).isEmpty())) {
             return false;
@@ -175,7 +160,7 @@ public class LoanService {
     }
 
 
-    public BigDecimal getTotalDebtByDebtor(User debtor) {
+    private BigDecimal getTotalDebtByDebtor(User debtor) {
         return loanDAO.sumOfLoansByDebtor(debtor.getId(), LoanStatus.ACTIVE);
     }
 

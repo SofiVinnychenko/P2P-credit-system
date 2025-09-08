@@ -19,8 +19,6 @@ public class LoanDTO {
     private User debtor;
     private BigDecimal amount;
     private BigDecimal interestRate;
-    private LocalDate startDate;
-    private LocalDate endDate;
     private int term;
 
     public boolean isValid() {
